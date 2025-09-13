@@ -1,4 +1,6 @@
-# zig-protobuf
+# protobuf.zig
+
+> Forked from https://github.com/Arwalk/zig-protobuf
 
 -------
 
@@ -27,13 +29,13 @@ This project is currently able to handle all scalar types for encoding, decoding
 There are 2 branches you can use for your development.
 
 * `master` is the branch with current developments, working with the latest stable release of zig.
-* `zig-master` is a branch that merges the developments in master, but works with the latest-ish master version of zig. 
+* `zig-master` is a branch that merges the developments in master, but works with the latest-ish master version of zig.
 
 ## How to use
 
-1. Add `protobuf` to your `build.zig.zon`.  
+1. Add `protobuf` to your `build.zig.zon`.
     ```sh
-    zig fetch --save "git+https://github.com/Arwalk/zig-protobuf#v2.0.0"
+    zig fetch --save "git+https://github.com/mochalins/protobuf.zig#master"
     ```
 1. Use the `protobuf` module. In your `build.zig`'s build function, add the dependency as module before
 `b.installArtifact(exe)`.
@@ -63,7 +65,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    
+
     ...
 
     const gen_proto = b.step("gen-proto", "generates zig files from protocol buffer definitions");
@@ -80,7 +82,3 @@ pub fn build(b: *std.Build) !void {
     gen_proto.dependOn(&protoc_step.step);
 }
 ```
-
-If you're really bored, you can buy me a coffe here.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N4N7VMS4F)

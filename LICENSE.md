@@ -1,7 +1,11 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2021 Arwalk
+Copyright for portions of `protobuf.zig` are held by Arwalk, 2021 as part of
+the `zig-protobuf` project. All other copyright for `protobuf.zig` are held by
+the below attribution.
+
+Copyright (c) 2025 mochalins
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
