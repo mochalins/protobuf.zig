@@ -2,12 +2,10 @@ name: test_and_lint_stable
 on:
   push:
     branches:
-      - master
-      - 'feature/**'
+      - main
   pull_request:
     branches:
-      - master
-      - 'feature/**'
+      - main
 jobs:
   test_stable:
     strategy:
@@ -15,31 +13,30 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v1
+      - uses: actions/checkout@v3
+      - uses: mlugg/setup-zig@v2
         with:
-          version: "0.14.0"
-      - run: zig build
+          version: "0.15.1"
       - run: zig build test
 
   bootstrap:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v1
+      - uses: actions/checkout@v3
+      - uses: mlugg/setup-zig@v2
         with:
-          version: "0.14.0"
+          version: "0.15.1"
       - run: zig build test
       - run: zig build bootstrap
       - run: zig build test
       - run: zig build
       - run: git diff
 
-  lint:
+  fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v1
+      - uses: actions/checkout@v3
+      - uses: mlugg/setup-zig@v2
         with:
-          version: "0.14.0"
-      - run: zig fmt --check src/protobuf.zig
+          version: "0.15.1"
+      - run: zig fmt --check src
