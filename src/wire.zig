@@ -8,22 +8,22 @@ const log = std.log.scoped(.zig_protobuf);
 pub const Type = enum(u3) {
     /// int32, int64, uint32, uint64, sint32, sint64, bool, enum
     varint = 0,
-    /// fixed64, sfixed64, double - referred to as `i64` in protobuf docs
-    fixed64 = 1,
+    /// fixed64, sfixed64, double
+    i64 = 1,
     /// string, bytes, embedded messages, packed repeated fields
     len = 2,
     /// group start (deprecated)
     sgroup = 3,
     /// group end (deprecated)
     egroup = 4,
-    /// fixed32, sfixed32, float - referred to as `i32` in protobuf docs
-    fixed32 = 5,
+    /// fixed32, sfixed32, float
+    i32 = 5,
 };
 
 /// Record tag.
 pub const Tag = packed struct(u32) {
     /// Wire type.
-    wire_type: Type,
+    type: Type,
     /// Field number.
     field: u29,
 
@@ -53,7 +53,7 @@ pub const Tag = packed struct(u32) {
     }
 
     test encode {
-        const tag: Tag = .{ .wire_type = .len, .field = 15 };
+        const tag: Tag = .{ .type = .len, .field = 15 };
 
         var result: [2]u8 = undefined;
         var writer: std.Io.Writer = .fixed(&result);
@@ -64,7 +64,7 @@ pub const Tag = packed struct(u32) {
         try std.testing.expectEqual((15 << 3) | 2, result[0]);
 
         writer = .fixed(&result);
-        const tag2: Tag = .{ .wire_type = .fixed64, .field = 1 };
+        const tag2: Tag = .{ .type = .i64, .field = 1 };
         const encoded2 = try tag2.encode(&writer);
         try std.testing.expectEqual(1, encoded2);
         try std.testing.expectEqual((1 << 3) | 1, result[0]);
@@ -82,8 +82,8 @@ pub const Tag = packed struct(u32) {
         const raw_result: u32, const consumed: usize =
             try decodeScalar(.uint32, reader);
 
-        const invalid_wire_type = (raw_result & 0x7) > 5;
-        if (invalid_wire_type) {
+        const invalid_type = (raw_result & 0x7) > 5;
+        if (invalid_type) {
             @branchHint(.cold);
             return error.InvalidInput;
         }
@@ -97,7 +97,7 @@ pub const Tag = packed struct(u32) {
         const tag: Tag, const consumed = try decode(&reader);
 
         try std.testing.expectEqual(5, consumed);
-        try std.testing.expectEqual(.fixed32, tag.wire_type);
+        try std.testing.expectEqual(.i32, tag.type);
         try std.testing.expectEqual(0x1FFFFFFF, tag.field);
     }
 };
@@ -543,21 +543,21 @@ pub fn decodeMessage(
                 if (fnum != tag.field) comptime continue;
                 if (comptime field_desc.ftype == .packed_repeated) {
                     // Packed repeated fields may be encoded as non-packed.
-                    if (tag.wire_type != .len and
-                        tag.wire_type != field_desc.ftype.packed_repeated.toWire())
+                    if (tag.type != .len and
+                        tag.type != field_desc.ftype.packed_repeated.toWire())
                     {
                         @branchHint(.cold);
                         return error.InvalidInput;
                     }
                 } else if (comptime field_desc.ftype == .repeated) {
                     // Non-packed repeated fields may be encoded as packed.
-                    if (tag.wire_type != .len and
-                        tag.wire_type != field_desc.ftype.repeated.toWire())
+                    if (tag.type != .len and
+                        tag.type != field_desc.ftype.repeated.toWire())
                     {
                         @branchHint(.cold);
                         return error.InvalidInput;
                     }
-                } else if (tag.wire_type != comptime field_desc.ftype.toWire()) {
+                } else if (tag.type != comptime field_desc.ftype.toWire()) {
                     @branchHint(.cold);
                     return error.InvalidInput;
                 }
@@ -569,11 +569,11 @@ pub fn decodeMessage(
             switch (comptime field_desc.ftype) {
                 .scalar => |scalar| {
                     if (comptime scalar.isSlice()) {
-                        if (tag.wire_type != .len) {
+                        if (tag.type != .len) {
                             @branchHint(.cold);
                             return error.InvalidInput;
                         }
-                        std.debug.assert(tag.wire_type == .len);
+                        std.debug.assert(tag.type == .len);
                         const len, const len_c =
                             try decodeScalar(.int32, reader);
                         consumed += len_c;
@@ -663,7 +663,7 @@ pub fn decodeMessage(
                     };
 
                     // Packed encoding.
-                    if (tag.wire_type == .len) {
+                    if (tag.type == .len) {
                         const len, const c = try decodeScalar(.int32, reader);
                         consumed += c;
 
@@ -705,7 +705,7 @@ pub fn decodeMessage(
                             @field(result, field.name) = null;
                         }
                     };
-                    const len: ?usize = if (tag.wire_type == .len) b: {
+                    const len: ?usize = if (tag.type == .len) b: {
                         const len, const c = try decodeScalar(.int32, reader);
                         consumed += c;
                         break :b @intCast(len);
@@ -719,7 +719,7 @@ pub fn decodeMessage(
                     );
                 },
                 .submessage => {
-                    std.debug.assert(tag.wire_type == .len);
+                    std.debug.assert(tag.type == .len);
 
                     const len, const c = try decodeScalar(.int32, reader);
                     consumed += c;
@@ -821,7 +821,7 @@ pub fn decodeMessage(
                             comptime continue :oo_fields;
                         }
 
-                        if (inner_desc.ftype.toWire() != tag.wire_type) {
+                        if (inner_desc.ftype.toWire() != tag.type) {
                             @branchHint(.cold);
                             return error.InvalidInput;
                         }
@@ -830,7 +830,7 @@ pub fn decodeMessage(
                         switch (comptime inner_desc.ftype) {
                             .scalar => |scalar| {
                                 if (comptime scalar.isSlice()) {
-                                    std.debug.assert(tag.wire_type == .len);
+                                    std.debug.assert(tag.type == .len);
 
                                     // `oneof` fields are always non-optional
                                     // as `oneof` has explicit presence.
@@ -838,7 +838,7 @@ pub fn decodeMessage(
                                         oo_field.type == []const u8,
                                     );
 
-                                    std.debug.assert(tag.wire_type == .len);
+                                    std.debug.assert(tag.type == .len);
                                     const len, const len_c =
                                         try decodeScalar(.int32, reader);
                                     consumed += len_c;
@@ -908,7 +908,7 @@ pub fn decodeMessage(
                                 );
                             },
                             .submessage => {
-                                std.debug.assert(tag.wire_type == .len);
+                                std.debug.assert(tag.type == .len);
 
                                 const len, const c =
                                     try decodeScalar(.int32, reader);
@@ -1057,12 +1057,12 @@ fn skipField(reader: *std.Io.Reader, tag: Tag) !usize {
         "Unknown field received in {any}\n",
         .{tag},
     );
-    switch (tag.wire_type) {
-        .fixed32 => {
+    switch (tag.type) {
+        .i32 => {
             try reader.discardAll(4);
             consumed += 4;
         },
-        .fixed64 => {
+        .i64 => {
             try reader.discardAll(8);
             consumed += 8;
         },

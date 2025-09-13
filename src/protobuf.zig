@@ -120,8 +120,8 @@ pub const FieldType = union(enum) {
                 .sint64,
                 .bool,
                 => .varint,
-                .float, .fixed32, .sfixed32 => .fixed32,
-                .double, .fixed64, .sfixed64 => .fixed64,
+                .float, .fixed32, .sfixed32 => .i32,
+                .double, .fixed64, .sfixed64 => .i64,
                 .string, .bytes => .len,
             };
         }
@@ -382,7 +382,7 @@ fn writePackedStringList(
 /// Writes the full tag of the field, if there is any.
 fn writeTag(writer: *std.Io.Writer, comptime field: FieldDescriptor) std.Io.Writer.Error!void {
     const tag: wire.Tag = comptime .{
-        .wire_type = field.ftype.toWire(),
+        .type = field.ftype.toWire(),
         .field = field.field_number.?,
     };
     _ = try tag.encode(writer);
