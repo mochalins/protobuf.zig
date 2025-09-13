@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const log = std.log.scoped(.zig_protobuf);
+const log = std.log.scoped(.protobuf);
 
 pub const json = @import("json.zig");
 pub const wire = @import("wire.zig");
@@ -1006,74 +1006,6 @@ pub fn deinitField(
     }
 }
 
-// decoding
-
-/// Enum describing if described data is raw (<u64) data or a byte slice.
-const ExtractedDataTag = enum {
-    RawValue,
-    Slice,
-};
-
-/// Union enclosing either a u64 raw value, or a byte slice.
-const ExtractedData = union(ExtractedDataTag) { RawValue: u64, Slice: []const u8 };
-
-/// Unit of extracted data from a stream
-const Extracted = struct { tag: wire.Tag, field_number: u32, data: ExtractedData };
-
-/// Decoded varint value generic type
-fn DecodedVarint(comptime T: type) type {
-    return struct {
-        value: T,
-        size: usize,
-    };
-}
-
-/// Decodes a varint from a slice, to type T.
-fn decode_varint(comptime T: type, input: []const u8) DecodingError!DecodedVarint(T) {
-    var index: usize = 0;
-    const len: usize = input.len;
-
-    var shift: u32 = 0;
-    var value: T = 0;
-    while (true) {
-        if (index >= len) return error.NotEnoughData;
-        const b = input[index];
-        if (shift >= @bitSizeOf(T)) {
-            // We are casting more bits than the type can handle
-            // It means the "@intCast(shift)" will throw a fatal error
-            return error.InvalidInput;
-        }
-        value += (@as(T, input[index] & 0x7F)) << (@as(std.math.Log2Int(T), @intCast(shift)));
-        index += 1;
-        if (b >> 7 == 0) break;
-        shift += 7;
-    }
-
-    return DecodedVarint(T){
-        .value = value,
-        .size = index,
-    };
-}
-
-/// Decodes a fixed value to type T
-fn decode_fixed(comptime T: type, slice: []const u8) T {
-    const result_base: type = switch (@bitSizeOf(T)) {
-        32 => u32,
-        64 => u64,
-        else => @compileError("can only manage 32 or 64 bit sizes"),
-    };
-    var result: result_base = 0;
-
-    for (slice, 0..) |byte, index| {
-        result += @as(result_base, @intCast(byte)) << (@as(std.math.Log2Int(result_base), @intCast(index * 8)));
-    }
-
-    return switch (T) {
-        u32, u64 => result,
-        else => @as(T, @bitCast(result)),
-    };
-}
-
 /// public decoding function meant to be embedded in message structures
 /// Iterates over the input and try to fill the resulting structure accordingly.
 pub fn decode(
@@ -1148,63 +1080,6 @@ test "encode and decode multiple varints" {
         const decoded, _ = try wire.decodeScalar(.uint64, &reader);
         try std.testing.expectEqual(num, decoded);
     }
-}
-
-test "decode fixed" {
-    const u_32 = [_]u8{ 2, 0, 0, 0 };
-    const u_32_result: u32 = 2;
-    try std.testing.expectEqual(u_32_result, decode_fixed(u32, &u_32));
-
-    const u_64 = [_]u8{ 1, 0, 0, 0, 0, 0, 0, 0 };
-    const u_64_result: u64 = 1;
-    try std.testing.expectEqual(u_64_result, decode_fixed(u64, &u_64));
-
-    const i_32 = [_]u8{ 0xFF, 0xFF, 0xFF, 0xFF };
-    const i_32_result: i32 = -1;
-    try std.testing.expectEqual(i_32_result, decode_fixed(i32, &i_32));
-
-    const i_64 = [_]u8{ 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-    const i_64_result: i64 = -2;
-    try std.testing.expectEqual(i_64_result, decode_fixed(i64, &i_64));
-
-    const f_32 = [_]u8{ 0x00, 0x00, 0xa0, 0x40 };
-    const f_32_result: f32 = 5.0;
-    try std.testing.expectEqual(f_32_result, decode_fixed(f32, &f_32));
-
-    const f_64 = [_]u8{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x40 };
-    const f_64_result: f64 = 5.0;
-    try std.testing.expectEqual(f_64_result, decode_fixed(f64, &f_64));
-}
-
-test "zigzag i32 - encode" {
-    var w: std.Io.Writer.Allocating = .init(std.testing.allocator);
-    defer w.deinit();
-
-    const input = "\xE7\x07";
-
-    // -500 (.ZigZag)  encodes to {0xE7,0x07} which equals to 999 (.Simple)
-
-    try writeAsVarint(&w.writer, @as(i32, -500), .sint32);
-    try std.testing.expectEqualSlices(u8, input, w.written());
-}
-
-test "zigzag i64 - encode" {
-    var w: std.Io.Writer.Allocating = .init(std.testing.allocator);
-    defer w.deinit();
-
-    const input = "\xE7\x07";
-
-    // -500 (.ZigZag)  encodes to {0xE7,0x07} which equals to 999 (.Simple)
-
-    try writeAsVarint(&w.writer, @as(i64, -500), .sint64);
-    try std.testing.expectEqualSlices(u8, input, w.written());
-}
-
-test "incorrect data - decode" {
-    const input = "\xFF\xFF\xFF\xFF\xFF\x01";
-    const value = decode_varint(u32, input);
-
-    try std.testing.expectError(error.InvalidInput, value);
 }
 
 test {

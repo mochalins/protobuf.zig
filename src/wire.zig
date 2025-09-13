@@ -2,7 +2,7 @@
 const std = @import("std");
 
 const protobuf = @import("protobuf.zig");
-const log = std.log.scoped(.zig_protobuf);
+const log = std.log.scoped(.protobuf_wire);
 
 /// Wire type.
 pub const Type = enum(u3) {
@@ -108,7 +108,8 @@ pub const ZigZag = struct {
         const to_int64: i64 = switch (type_of_val) {
             i32 => @intCast(int_value),
             i64 => int_value,
-            else => @compileError("should not be here"),
+            comptime_int => int_value,
+            else => @compileError("unsupported ZigZag integer type"),
         };
         const calc = (to_int64 << 1) ^ (to_int64 >> 63);
         return @bitCast(calc);
@@ -138,6 +139,8 @@ pub const ZigZag = struct {
             @as(u64, 0xffffffffffffffff),
             ZigZag.encode(@as(i64, std.math.minInt(i64))),
         );
+
+        try std.testing.expectEqual(999, ZigZag.encode(-500));
     }
 
     pub fn decode(raw_int: anytype) @TypeOf(raw_int) {
@@ -353,6 +356,64 @@ test decodeScalar {
         const decoded: i32, const consumed = try decodeScalar(.int32, &reader);
         try std.testing.expectEqual(5, consumed);
         try std.testing.expectEqual(-1, decoded);
+    }
+}
+
+test "decodeScalar fixed" {
+    { // u32
+        const bytes: []const u8 = &.{ 2, 0, 0, 0 };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.fixed32, &reader);
+        try std.testing.expectEqual(2, decoded);
+    }
+    { // u64
+        const bytes: []const u8 = &.{ 1, 0, 0, 0, 0, 0, 0, 0 };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.fixed64, &reader);
+        try std.testing.expectEqual(1, decoded);
+    }
+    { // i32
+
+        const bytes: []const u8 = &.{ 0xFF, 0xFF, 0xFF, 0xFF };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.sfixed32, &reader);
+        try std.testing.expectEqual(-1, decoded);
+    }
+    { // i64
+        const bytes: []const u8 = &.{
+            0xFE,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+            0xFF,
+        };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.sfixed64, &reader);
+        try std.testing.expectEqual(-2, decoded);
+    }
+    { // f32
+        const bytes: []const u8 = &.{ 0x00, 0x00, 0xa0, 0x40 };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.float, &reader);
+        try std.testing.expectEqual(5.0, decoded);
+    }
+    { // f64
+        const bytes: []const u8 = &.{
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x14,
+            0x40,
+        };
+        var reader: std.Io.Reader = .fixed(bytes);
+        const decoded, _ = try decodeScalar(.double, &reader);
+        try std.testing.expectEqual(5.0, decoded);
     }
 }
 
