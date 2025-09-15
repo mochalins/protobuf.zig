@@ -5,10 +5,10 @@ const std = @import("std");
 const pb = @import("protobuf");
 const fd = pb.fd;
 /// import package opentelemetry.proto.common.v1
-const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
+const common_v1 = @import("../common/v1.pb.zig");
 
 pub const Resource = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     dropped_attributes_count: u32 = 0,
 
     pub const _desc_table = .{

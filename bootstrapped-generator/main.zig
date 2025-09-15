@@ -147,14 +147,39 @@ const GenerationContext = struct {
                         ),
                     );
 
-                    const optional_pub_directive: []const u8 = if (package.value_ptr.*) "pub const" else "const";
+                    var self_it = std.mem.splitScalar(u8, name.buf, '.');
+                    var import_it = std.mem.splitScalar(u8, package.key_ptr.*, '.');
+
+                    var is_child: bool = false;
+                    var is_parent: bool = false;
+                    var is_sibling: bool = false;
+
+                    while (self_it.next()) |fragment| {
+                        if (import_it.peek()) |next| {
+                            if (std.mem.eql(u8, fragment, next)) {
+                                _ = import_it.next();
+                            } else {
+                                is_sibling = true;
+                                break;
+                            }
+                        } else {
+                            is_parent = true;
+                            break;
+                        }
+                    } else if (import_it.peek() != null) {
+                        is_child = true;
+                    } else {
+                        // Same package/name should be unreachable from the
+                        // inequality check at top of imported packages loop.
+                        unreachable;
+                    }
 
                     try lines.append(allocator, try std.fmt.allocPrint(
                         allocator,
-                        "{s} {!s} = @import(\"{!s}\");\n",
+                        "{s}const {!s} = @import(\"{!s}\");\n",
                         .{
-                            optional_pub_directive,
-                            escapeFqn(allocator, package.key_ptr.*),
+                            if (is_parent or is_sibling) "" else "pub ",
+                            escapeFqn(allocator, if (is_parent) package.key_ptr.* else import_it.rest()),
                             self.resolvePath(allocator, name.buf, package.key_ptr.*),
                         },
                     ));
@@ -268,9 +293,35 @@ const GenerationContext = struct {
                 while (it.next()) |value| {
                     // it is in different package. return fully qualified name including accessor
                     if (value.eql(parent.?)) {
-                        const prop = try escapeFqn(allocator, parent.?.buf);
-                        const name = fullTypeName.buf[prop.len + 1 ..];
-                        return try std.fmt.allocPrint(allocator, "{s}.{s}", .{ prop, name });
+                        var is_child: bool = false;
+                        var is_parent: bool = false;
+                        var is_sibling: bool = false;
+
+                        var self_it = std.mem.splitScalar(u8, filePackage.buf, '.');
+                        var import_it = std.mem.splitScalar(u8, value.buf, '.');
+
+                        while (self_it.next()) |fragment| {
+                            if (import_it.peek()) |next| {
+                                if (std.mem.eql(u8, fragment, next)) {
+                                    _ = import_it.next();
+                                } else {
+                                    is_sibling = true;
+                                    break;
+                                }
+                            } else {
+                                is_parent = true;
+                                break;
+                            }
+                        } else if (import_it.peek() != null) {
+                            is_child = true;
+                        } else {
+                            // Same package/name should be unreachable from the
+                            // inequality check at top of parent loop.
+                            unreachable;
+                        }
+                        const prop = try escapeFqn(allocator, if (is_parent) value.buf else import_it.rest());
+                        const name = typeName[1..][std.mem.lastIndexOfScalar(u8, typeName[1..], '.') orelse unreachable ..];
+                        return try std.fmt.allocPrint(allocator, "{s}{s}", .{ prop, name });
                     }
                 }
                 parent = parent.?.parent();

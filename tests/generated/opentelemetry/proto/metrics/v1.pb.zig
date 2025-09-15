@@ -5,9 +5,9 @@ const std = @import("std");
 const pb = @import("protobuf");
 const fd = pb.fd;
 /// import package opentelemetry.proto.common.v1
-const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
+const common_v1 = @import("../common/v1.pb.zig");
 /// import package opentelemetry.proto.resource.v1
-const opentelemetry_proto_resource_v1 = @import("../resource/v1.pb.zig");
+const resource_v1 = @import("../resource/v1.pb.zig");
 
 pub const AggregationTemporality = enum(i32) {
     AGGREGATION_TEMPORALITY_UNSPECIFIED = 0,
@@ -86,7 +86,7 @@ pub const MetricsData = struct {
 };
 
 pub const ResourceMetrics = struct {
-    resource: ?opentelemetry_proto_resource_v1.Resource = null,
+    resource: ?resource_v1.Resource = null,
     scope_metrics: std.ArrayListUnmanaged(ScopeMetrics) = .empty,
     schema_url: []const u8 = &.{},
 
@@ -153,7 +153,7 @@ pub const ResourceMetrics = struct {
 };
 
 pub const ScopeMetrics = struct {
-    scope: ?opentelemetry_proto_common_v1.InstrumentationScope = null,
+    scope: ?common_v1.InstrumentationScope = null,
     metrics: std.ArrayListUnmanaged(Metric) = .empty,
     schema_url: []const u8 = &.{},
 
@@ -223,7 +223,7 @@ pub const Metric = struct {
     name: []const u8 = &.{},
     description: []const u8 = &.{},
     unit: []const u8 = &.{},
-    metadata: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    metadata: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     data: ?data_union = null,
 
     pub const _data_case = enum {
@@ -636,7 +636,7 @@ pub const Summary = struct {
 };
 
 pub const NumberDataPoint = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     start_time_unix_nano: u64 = 0,
     time_unix_nano: u64 = 0,
     exemplars: std.ArrayListUnmanaged(Exemplar) = .empty,
@@ -722,7 +722,7 @@ pub const NumberDataPoint = struct {
 };
 
 pub const HistogramDataPoint = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     start_time_unix_nano: u64 = 0,
     time_unix_nano: u64 = 0,
     count: u64 = 0,
@@ -805,7 +805,7 @@ pub const HistogramDataPoint = struct {
 };
 
 pub const ExponentialHistogramDataPoint = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     start_time_unix_nano: u64 = 0,
     time_unix_nano: u64 = 0,
     count: u64 = 0,
@@ -959,7 +959,7 @@ pub const ExponentialHistogramDataPoint = struct {
 };
 
 pub const SummaryDataPoint = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     start_time_unix_nano: u64 = 0,
     time_unix_nano: u64 = 0,
     count: u64 = 0,
@@ -1099,7 +1099,7 @@ pub const SummaryDataPoint = struct {
 };
 
 pub const Exemplar = struct {
-    filtered_attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    filtered_attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     time_unix_nano: u64 = 0,
     span_id: []const u8 = &.{},
     trace_id: []const u8 = &.{},

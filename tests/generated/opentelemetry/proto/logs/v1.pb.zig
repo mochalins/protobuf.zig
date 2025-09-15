@@ -5,9 +5,9 @@ const std = @import("std");
 const pb = @import("protobuf");
 const fd = pb.fd;
 /// import package opentelemetry.proto.common.v1
-const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
+const common_v1 = @import("../common/v1.pb.zig");
 /// import package opentelemetry.proto.resource.v1
-const opentelemetry_proto_resource_v1 = @import("../resource/v1.pb.zig");
+const resource_v1 = @import("../resource/v1.pb.zig");
 
 pub const SeverityNumber = enum(i32) {
     SEVERITY_NUMBER_UNSPECIFIED = 0,
@@ -108,7 +108,7 @@ pub const LogsData = struct {
 };
 
 pub const ResourceLogs = struct {
-    resource: ?opentelemetry_proto_resource_v1.Resource = null,
+    resource: ?resource_v1.Resource = null,
     scope_logs: std.ArrayListUnmanaged(ScopeLogs) = .empty,
     schema_url: []const u8 = &.{},
 
@@ -175,7 +175,7 @@ pub const ResourceLogs = struct {
 };
 
 pub const ScopeLogs = struct {
-    scope: ?opentelemetry_proto_common_v1.InstrumentationScope = null,
+    scope: ?common_v1.InstrumentationScope = null,
     log_records: std.ArrayListUnmanaged(LogRecord) = .empty,
     schema_url: []const u8 = &.{},
 
@@ -246,8 +246,8 @@ pub const LogRecord = struct {
     observed_time_unix_nano: u64 = 0,
     severity_number: SeverityNumber = @enumFromInt(0),
     severity_text: []const u8 = &.{},
-    body: ?opentelemetry_proto_common_v1.AnyValue = null,
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    body: ?common_v1.AnyValue = null,
+    attributes: std.ArrayListUnmanaged(common_v1.KeyValue) = .empty,
     dropped_attributes_count: u32 = 0,
     flags: u32 = 0,
     trace_id: []const u8 = &.{},
