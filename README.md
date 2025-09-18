@@ -4,56 +4,46 @@
 
 -------
 
-## Welcome!
+A Google Protocol Buffers implementation in Zig. Primarily targets
+[proto3](https://protobuf.dev/programming-guides/proto3/).
 
-This is an implementation of google Protocol Buffers version 3 in Zig.
+## Installation
 
-Protocol Buffers is a serialization protocol so systems, from any programming language or platform, can exchange data reliably.
+This package requires only the latest stable version of Zig, 0.15.1.
 
-Protobuf's strength lies in a generic codec paired with user-defined "messages" that will define the true nature of the data encoded.
-
-Messages are usually mapped to a native language's structure/class definition thanks to a language-specific generator associated with an implementation.
-
-Zig's compile-time evaluation becomes extremely strong and useful in this context: because the structure (a message) has to be known beforehand, the generic codec can leverage informations, at compile time, of the message and it's nature. This allows optimizations that are hard to get as easily in any other language, as Zig can mix compile-time informations with runtime-only data to optimize the encoding and decoding code paths.
-
-## State of the implementation
-
-This repository, so far, only aims at implementing [protocol buffers version 3](https://developers.google.com/protocol-buffers/docs/proto3#simple).
-
-The latest version of the zig compiler used for this project is 0.15.1.
-
-This project is currently able to handle all scalar types for encoding, decoding, and generation through the plugin.
-
-## Branches
-
-* `main` is the branch with current developments, working with the latest stable release of zig.
-
-## How to use
+It can be added as a dependency to your project through the package manager.
 
 1. Add `protobuf` to your `build.zig.zon`.
     ```sh
     zig fetch --save "git+https://github.com/mochalins/protobuf.zig#master"
     ```
-1. Use the `protobuf` module. In your `build.zig`'s build function, add the dependency as module before
-`b.installArtifact(exe)`.
-    ```zig
-    pub fn build(b: *std.Build) !void {
-        // first create a build for the dependency
-        const protobuf_dep = b.dependency("protobuf", .{
-            .target = target,
-            .optimize = optimize,
-        });
-
-        // and lastly use the dependency as a module
-        exe.root_module.addImport("protobuf", protobuf_dep.module("protobuf"));
-    }
-    ```
-
-## Generating .zig files out of .proto definitions
-
-You can do this programatically as a compilation step for your application. The following snippet shows how to create a `zig build gen-proto` command for your project.
+2. Use the `protobuf` module. In your `build.zig`'s build function, add the
+   dependency to your target module.
 
 ```zig
+pub fn build(b: *std.Build) !void {
+    // first create a build for the dependency
+    const protobuf_dep = b.dependency("protobuf", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // ...
+
+    // and lastly use the dependency as a module
+    exe.root_module.addImport("protobuf", protobuf_dep.module("protobuf"));
+}
+```
+
+## Usage
+
+Once `protobuf.zig` is added as a dependency into your project, it can be used
+to generate Zig implementation files from the project's `.proto` files through
+the build system.
+
+```zig
+// build.zig
+
 const protobuf = @import("protobuf");
 
 pub fn build(b: *std.Build) !void {
@@ -63,7 +53,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    ...
+    // ...
 
     const gen_proto = b.step("gen-proto", "generates zig files from protocol buffer definitions");
 
@@ -79,3 +69,6 @@ pub fn build(b: *std.Build) !void {
     gen_proto.dependOn(&protoc_step.step);
 }
 ```
+
+When the `gen-proto` step is added to your project's build steps, it may be
+used by invoking `zig build gen-proto` from your project's root directory.
